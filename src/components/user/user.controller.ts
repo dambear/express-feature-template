@@ -1,44 +1,112 @@
-// userController.ts
-import { Request, Response } from "express"
+import { NextFunction, Request, Response } from "express"
+import { userSchema, updateUserSchema } from "./user.validation"
 import {
-  createUser,
-  getUserById,
-  validateUserCredentials,
+  createUserService,
+  getUsersService,
+  getUserByIdService,
+  updateUserService,
+  deleteUserService,
 } from "./user.service"
-import { mapUserToDto } from "./user.dto"
 
-// Register a new user
-export const registerUser = async (req: Request, res: Response) => {
+import { sendResponse } from "../../utils/response/sendResponse "
+
+// Controller to create a user
+export const createUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const { email, password, firstName, lastName } = req.body
-    const userDto = await createUser(email, password, firstName, lastName)
-    res.status(201).json(userDto)
+    const validatedData = await userSchema.parseAsync(req.body)
+
+    const user = await createUserService(validatedData)
+
+    sendResponse(res, 201, "User created successfully.", user)
   } catch (error) {
-    res.status(500).json({ message: "Error registering user", error: error })
+    next(error)
   }
 }
 
-// Get user by ID
-export const getUser = async (req: Request, res: Response) => {
+// Controller to get all users
+export const getUsers = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const user = await getUserById(Number(req.params.id))
-    if (!user) {
-      res.status(404).json({ message: "User not found" })
+    const users = await getUsersService()
+
+    if (users.length === 0) {
+      sendResponse(res, 200, "No user data found.", users)
+    } else {
+      sendResponse(res, 200, "Users retrieved successfully.", users)
     }
-    const userDto = mapUserToDto(user)
-    res.status(200).json(userDto)
-  } catch (error: any) {
-    res.status(500).json({ message: "Error fetching user", error: error })
+  } catch (error) {
+    next(error)
   }
 }
 
-// User login
-export const login = async (req: Request, res: Response) => {
+// Controller to get a user by ID
+export const getUserById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { id } = req.params
+
   try {
-    const { email, password } = req.body
-    const token = await validateUserCredentials(email, password)
-    res.status(200).json({ token })
-  } catch (error: any) {
-    res.status(401).json({ message: "Invalid credentials", error: error })
+    const user = await getUserByIdService(Number(id))
+
+    if (!user) {
+      return sendResponse(res, 404, `User not found with ID ${id}.`)
+    } else {
+      sendResponse(res, 200, `User retrieved successfully.`, user)
+    }
+  } catch (error) {
+    next(error)
+  }
+}
+
+// Controller to update a user
+export const updateUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params
+
+    const validatedData = updateUserSchema.parse(req.body)
+
+    const user = await updateUserService(Number(id), validatedData)
+
+    if (!user) {
+      return sendResponse(res, 404, `User not found with ID ${id}.`)
+    } else {
+      sendResponse(res, 200, `User with ID ${id} updated successfully.`, user)
+    }
+  } catch (error) {
+    next(error)
+  }
+}
+
+// Controller to delete a user
+export const deleteUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { id } = req.params
+
+  try {
+    const user = await deleteUserService(Number(id))
+
+    if (!user) {
+      return sendResponse(res, 404, `User not found with ID ${id}.`)
+    } else {
+      sendResponse(res, 200, `User with ID ${id} deleted successfully.`)
+    }
+  } catch (error) {
+    next(error)
   }
 }

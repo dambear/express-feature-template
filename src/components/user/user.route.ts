@@ -1,17 +1,18 @@
-// userRoutes.ts
-import { Router } from "express"
-import { registerUser, getUser, login } from "./user.controller"
-import { validateUserRegistration, validateLogin } from "./userValidator"
+import express from "express"
+import {
+  createUser,
+  getUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+} from "./user.controller"
 
-const router = Router()
+const router = express.Router()
 
-// Register route with validation middleware
-router.post("/register", validateUserRegistration, registerUser)
-
-// Login route with validation middleware
-router.post("/login", validateLogin, login)
-
-// Get user by ID route
-router.get("/:id", getUser)
+router.post("/", createUser)
+router.get("/", getUsers)
+router.get("/:id", getUserById)
+router.put("/:id", updateUser)
+router.delete("/:id", deleteUser)
 
 export default router

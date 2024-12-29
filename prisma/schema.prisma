@@ -7,11 +7,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  password  String
-  firstName String?
-  lastName  String?
-  createdAt DateTime  @default(now())
+model organizations {
+  organization_id      Int      @id @default(autoincrement())
+  organization_name    String   @db.VarChar(255)
+  organization_email   String   @unique(map: "organization_email") @db.VarChar(255)
+  organization_address String   @db.Text
+  created_at           DateTime @default(now()) @db.Timestamp(0)
+  updated_at           DateTime @default(now()) @db.Timestamp(0)
+  users                users[]
+}
+
+model users {
+  user_id         Int            @id @default(autoincrement())
+  firstname       String         @db.VarChar(255)
+  middlename      String?        @db.VarChar(255)
+  lastname        String         @db.VarChar(255)
+  suffix          String?        @db.VarChar(50)
+  email           String         @unique(map: "email") @db.VarChar(255)
+  password        String         @db.VarChar(255)
+  phone_number    String?        @db.VarChar(15)
+  address         String?        @db.Text
+  date_hired      DateTime?      @db.Date
+  contract_type   String?        @db.VarChar(50)
+  employee_id     String?        @db.VarChar(50)
+  organization_id Int?
+  status          users_status?  @default(Active)
+  created_at      DateTime       @default(now()) @db.Timestamp(0)
+  updated_at      DateTime       @default(now()) @db.Timestamp(0)
+  organizations   organizations? @relation(fields: [organization_id], references: [organization_id], onDelete: Restrict, onUpdate: Restrict, map: "users_ibfk_1")
+
+  @@index([organization_id], map: "organization_id")
+}
+
+enum users_status {
+  Active
+  Inactive
+  Suspended
 }

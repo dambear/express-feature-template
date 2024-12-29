@@ -1,62 +1,70 @@
-// userService.ts
-import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
-import { PrismaClient } from "@prisma/client"
-import { UserDto, mapUserToDto } from "./user.dto" // Import DTO and mapping function
+import { User, UpdateUser } from "./user.validation"
+import prisma from "../../utils/prismaClient"
+import { hashedPassword } from "../../utils/passwordUtils"
 
-const prisma = new PrismaClient()
-
-// Create a new user
-export const createUser = async (
-  email: string,
-  password: string,
-  firstName?: string,
-  lastName?: string
-): Promise<UserDto> => {
-  const hashedPassword = await bcrypt.hash(password, 10)
-
-  const user = await prisma.user.create({
+export const createUserService = async (userData: User) => {
+  const user = await prisma.users.create({
     data: {
-      email,
-      password: hashedPassword,
-      firstName,
-      lastName,
+      ...userData,
+      password: await hashedPassword(userData.password),
     },
   })
-
-  return mapUserToDto(user)
+  return user
 }
 
-// Find a user by email
-export const findUserByEmail = async (email: string) => {
-  return prisma.user.findUnique({
-    where: { email },
+export const getUsersService = async () => {
+  const users = await prisma.users.findMany()
+  return users
+}
+
+export const getUserByIdService = async (user_id: any) => {
+  const user = await prisma.users.findUnique({
+    where: { user_id: user_id },
   })
+  return user
 }
 
-// Validate user credentials for login
-export const validateUserCredentials = async (
-  email: string,
-  password: string
-): Promise<string | null> => {
-  const user = await findUserByEmail(email)
-  if (!user) throw new Error("Invalid credentials")
+export const updateUserService = async (
+  user_id: any,
+  userData: Partial<UpdateUser>
+) => {
+  // Fetch current user data from the database
+  const currentUser = await getUserByIdService(user_id)
 
-  const isValid = await bcrypt.compare(password, user.password)
-  if (!isValid) throw new Error("Invalid credentials")
+  if (!currentUser) {
+    return null
+  }
 
-  return generateAuthToken(user.id)
-}
+  // If password is provided, hash it before updating
+  if (userData.password) {
+    userData.password = await hashedPassword(userData.password)
+  }
 
-// Generate JWT token for authentication
-const generateAuthToken = (userId: number): string => {
-  const secretKey = process.env.JWT_SECRET_KEY || "your-secret-key"
-  return jwt.sign({ userId }, secretKey, { expiresIn: "1h" })
-}
+  // Merge the current user data with the provided data
+  const updatedData = {
+    ...currentUser, // Start with current user data
+    ...userData, // Override with provided fields
+  }
 
-// Get a user by ID
-export const getUserById = async (id: number) => {
-  return prisma.user.findUnique({
-    where: { id },
+  const updatedUser = await prisma.users.update({
+    where: { user_id: user_id },
+    data: updatedData,
   })
+
+  return updatedUser
+}
+
+export const deleteUserService = async (user_id: any) => {
+  const user = await prisma.users.delete({
+    where: { user_id: user_id },
+  })
+  return user
+}
+
+// <----- Custome services ------>
+export const getUserByEmailService = async (email: string) => {
+  const user = await prisma.users.findUnique({
+    where: { email: email },
+  })
+  return user
 }
